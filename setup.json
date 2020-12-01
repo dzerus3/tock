@@ -1,0 +1,7 @@
+{
+    "workrave": {
+        "Rest break": {"time": 900, "break": 30, "message": "Rest break"},
+        "Long break": {"time": 3600, "break": 300, "message": "Long break"},
+        "Finish": {"time": 14400, "break": 0, "message": "Stop working"}
+    }
+}
