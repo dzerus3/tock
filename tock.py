@@ -8,17 +8,17 @@ class Gui(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, args, kwargs)
 
-        progress.pack(pady=10)
-
 class MainFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        self.progress = tk.Progressbar(
-            self, orient=tk.HORIZONTAL,
-            length=100, mode="determinate"
-        )
+        self.loadSetup()
 
-        progress.pack(pady = 10)
+        n = tk.StringVar()
+        self.presets = ttk.Combobox(window, width = 27, textvariable = n)
+        self.presets['values'] = self.setup.keys()
+        self.presets.current(0)
+
+        createProgress(self.setup[self.presets.current()])
 
         startButton = tk.Button(
             self,
@@ -28,13 +28,24 @@ class MainFrame(tk.Frame):
         )
         startButton.pack(side="bottom")
 
+    def createProgress(self, preset):
+        for timer in preset:
+            label = Label(self, text = timer)
+            label.pack()
+
+            prog = tk.Progressbar(
+                self, orient=tk.HORIZONTAL,
+                length=100, mode="determinate"
+            )
+
+            prog.pack(pady = 10)
 
     def start(self):
         pass
 
     def loadSetup(self):
         with open("setup.json", "r") as setupFile:
-            self.setup = json.load(setupFile)
+            self.setup = dict(json.load(setupFile))
 
 def main():
     gui = Gui()
