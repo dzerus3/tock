@@ -49,32 +49,53 @@ class MainFrame(tk.Frame):
             label = tk.Label(self, text = timer)
             label.pack()
 
+            barLen = preset[timer]["duration"]
             prog = ttk.Progressbar(
                 self,
                 orient = tk.HORIZONTAL,
                 length = 100,
-                value = 0, #TODO: Set to max or set to 0?
+                maximum = barLen,
+                value = 0,
                 mode="determinate"
             )
             prog.pack(pady = 10)
 
-            barLen = preset[timer]["duration"]
             breakLen = preset[timer]["break"]
             bars.append([prog, barLen, breakLen])
         return bars
 
     def start(self, bars):
+        breakBar = ttk.Progressbar(
+            self,
+            orient = tk.HORIZONTAL,
+            length = 100,
+            value = 100,
+            mode="determinate"
+        )
+        breakBar.pack(pady = 10)
+
         while True:
             self.updateProgressbars(bars)
             highestFinished = self.checkForBreak(bars)
 
             if highestFinished > -1:
-                print(f"Break duration is {bars[highestFinished][2]}")
+                duration = bars[highestFinished][2]
+                if duration:
+                    self.takeBreak(breakBar, duration)
+
+    def takeBreak(self, breakBar, duration):
+        breakStep = 100/duration
+        while breakBar["value"] > 0:
+            time.sleep(1)
+            breakBar["value"] -= breakStep
+            self.update_idletasks()
+        breakBar["value"] = 100
 
     def updateProgressbars(self, bars):
         time.sleep(1)
         for bar in bars:
-            bar[0]["value"] += (100/bar[1])
+            # bar[0]["value"] += (100/bar[1])
+            bar[0]["value"] += 1
         self.update_idletasks()
 
     def checkForBreak(self, bars):
@@ -82,7 +103,7 @@ class MainFrame(tk.Frame):
         #TODO: Add option for longest break instead of last in order
         for index in range(len(bars)):
             timerValue = bars[index][0]["value"]
-            if timerValue >= 100:
+            if timerValue >= bars[index][1]:
                 if highestFinished < index:
                     highestFinished = index
                     bars[index][0]["value"] = 0
