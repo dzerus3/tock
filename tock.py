@@ -49,7 +49,6 @@ class MainFrame(tk.Frame):
             label = tk.Label(self, text = timer)
             label.pack()
 
-            barLen = preset[timer]["duration"]
             prog = ttk.Progressbar(
                 self,
                 orient = tk.HORIZONTAL,
@@ -59,20 +58,35 @@ class MainFrame(tk.Frame):
             )
             prog.pack(pady = 10)
 
-            bars.append([prog, barLen])
+            barLen = preset[timer]["duration"]
+            breakLen = preset[timer]["break"]
+            bars.append([prog, barLen, breakLen])
         return bars
 
     def start(self, bars):
         while True:
-            time.sleep(1)
-            for bar in bars:
-                bar[0]["value"] += (100/bar[1])
-            self.update_idletasks()
+            self.updateProgressbars(bars)
+            highestFinished = self.checkForBreak(bars)
 
-            for bar in bars:
-                if bar[0]["value"] >= 100:
-                    print("Timer finished")
-                    bar[0]["value"] = 0
+            if highestFinished > -1:
+                print(f"Break duration is {bars[highestFinished][2]}")
+
+    def updateProgressbars(self, bars):
+        time.sleep(1)
+        for bar in bars:
+            bar[0]["value"] += (100/bar[1])
+        self.update_idletasks()
+
+    def checkForBreak(self, bars):
+        highestFinished = -1
+        #TODO: Add option for longest break instead of last in order
+        for index in range(len(bars)):
+            timerValue = bars[index][0]["value"]
+            if timerValue >= 100:
+                if highestFinished < index:
+                    highestFinished = index
+                    bars[index][0]["value"] = 0
+        return highestFinished
 
     def loadSetup(self):
         with open("setup.json", "r") as setupFile:
