@@ -26,18 +26,19 @@ class MainFrame(tk.Frame):
         self.presets = ttk.Combobox(self, width = 27, textvariable = n)
 
         presetNames = list(self.setup.keys())
-        self.presets['values'] = presetNames
+        self.presets["values"] = presetNames
         self.presets.pack()
 
-        currentPreset = self.setup[self.presets.get()] #FIXME
+        currentPreset = self.setup[self.presets["values"][0]] #FIXME
 
-        self.createProgress(currentPreset) #FIXME
+        # createProgress returns reference to interact with the progress bars
+        bars = self.createProgress(currentPreset) #FIXME
 
         startButton = tk.Button(
             self,
             text="Start",
             width = 10,
-            command = lambda: self.start(currentPreset)
+            command = lambda: self.start(bars)
         )
         startButton.pack(side="bottom")
 
@@ -52,21 +53,26 @@ class MainFrame(tk.Frame):
             prog = ttk.Progressbar(
                 self,
                 orient = tk.HORIZONTAL,
-                length = barLen, #TODO: Set to 100?
-                value = barLen, #TODO: Set to max or set to 0?
+                length = 100,
+                value = 0, #TODO: Set to max or set to 0?
                 mode="determinate"
             )
             prog.pack(pady = 10)
 
-            bars.append(prog)
+            bars.append([prog, barLen])
         return bars
 
-    def start(self, preset, bars):
+    def start(self, bars):
         while True:
             time.sleep(1)
             for bar in bars:
-                bar["value"] -= 1
-            root.update_idletasks()
+                bar[0]["value"] += (100/bar[1])
+            self.update_idletasks()
+
+            for bar in bars:
+                if bar[0]["value"] >= 100:
+                    print("Timer finished")
+                    bar[0]["value"] = 0
 
     def loadSetup(self):
         with open("setup.json", "r") as setupFile:
