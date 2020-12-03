@@ -19,6 +19,7 @@ class Gui(tk.Tk):
 class MainFrame(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
+        self.timerRunning = 0
         self.loadSetup()
 
         # Dropdown box to select preset
@@ -32,19 +33,19 @@ class MainFrame(tk.Frame):
         currentPreset = self.setup[self.presets["values"][0]] #FIXME
 
         # createProgress returns reference to interact with the progress bars
-        bars = self.createProgress(currentPreset) #FIXME
+        self.createProgress(currentPreset) #FIXME
 
-        startButton = tk.Button(
+        self.startButton = tk.Button(
             self,
             text="Start",
             width = 10,
-            command = lambda: self.start(bars)
+            command = self.start
         )
-        startButton.pack(side="bottom")
+        self.startButton.pack(side="bottom")
 
     # Creates appropriate ammount of progress bars based on preset
     def createProgress(self, preset):
-        bars = []
+        self.bars = []
         for timer in preset:
             label = tk.Label(self, text = timer)
             label.pack()
@@ -61,10 +62,13 @@ class MainFrame(tk.Frame):
             prog.pack(pady = 10)
 
             breakLen = preset[timer]["break"]
-            bars.append([prog, barLen, breakLen])
-        return bars
+            self.bars.append([prog, barLen, breakLen])
 
-    def start(self, bars):
+    def start(self):
+        self.timerRunning = 1
+        self.startButton["command"] = lambda: self.stopTimers(breakBar)
+        self.startButton["text"] = "Stop"
+
         breakBar = ttk.Progressbar(
             self,
             orient = tk.HORIZONTAL,
@@ -73,40 +77,57 @@ class MainFrame(tk.Frame):
             mode="determinate"
         )
         breakBar.pack(pady = 10)
+        #TODO: There is some way to do this without a lambda
+        self.after(1000, self.updateProgressbars, breakBar)
 
-        while True:
-            self.updateProgressbars(bars)
-            highestFinished = self.checkForBreak(bars)
+        # while self.timerRunning:
+        #     self.after(1000, self.updateProgressbars)
+        #     # self.after(1000, lambda: print("thing"))
+        #     highestFinished = self.checkForBreak()
 
-            if highestFinished > -1:
-                duration = bars[highestFinished][2]
-                if duration:
-                    self.takeBreak(breakBar, duration)
+        #     if highestFinished > -1:
+        #         duration = self.bars[highestFinished][2]
+        #         if duration:
+        #             self.takeBreak(breakBar, duration)
+
+    def stopTimers(self, breakBar):
+        self.timerRunning = 0
+        self.startButton["command"] = self.start
+        self.startButton["text"] = "Start"
+        #FIXME Make breakbar pack_forget'ed, rather than destroyed.
+        breakBar.destroy()
 
     def takeBreak(self, breakBar, duration):
         breakStep = 100/duration
         while breakBar["value"] > 0:
+            #FIXME Make this us tk.after()
             time.sleep(1)
             breakBar["value"] -= breakStep
             self.update_idletasks()
         breakBar["value"] = 100
 
-    def updateProgressbars(self, bars):
-        time.sleep(1)
-        for bar in bars:
-            # bar[0]["value"] += (100/bar[1])
+    def updateProgressbars(self, breakBar):
+        for bar in self.bars:
             bar[0]["value"] += 1
         self.update_idletasks()
+        highestFinished = self.checkForBreak()
 
-    def checkForBreak(self, bars):
+        if highestFinished > -1:
+            duration = self.bars[highestFinished][2]
+            if duration:
+                self.takeBreak(breakBar, duration)
+        if self.timerRunning:
+            self.after(1000, self.updateProgressbars, breakBar)
+
+    def checkForBreak(self):
         highestFinished = -1
         #TODO: Add option for longest break instead of last in order
-        for index in range(len(bars)):
-            timerValue = bars[index][0]["value"]
-            if timerValue >= bars[index][1]:
+        for index in range(len(self.bars)):
+            timerValue = self.bars[index][0]["value"]
+            if timerValue >= self.bars[index][1]:
                 if highestFinished < index:
                     highestFinished = index
-                    bars[index][0]["value"] = 0
+                    self.bars[index][0]["value"] = 0
         return highestFinished
 
     def loadSetup(self):
