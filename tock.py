@@ -77,18 +77,7 @@ class MainFrame(tk.Frame):
             mode="determinate"
         )
         breakBar.pack(pady = 10)
-        #TODO: There is some way to do this without a lambda
         self.after(1000, self.updateProgressbars, breakBar)
-
-        # while self.timerRunning:
-        #     self.after(1000, self.updateProgressbars)
-        #     # self.after(1000, lambda: print("thing"))
-        #     highestFinished = self.checkForBreak()
-
-        #     if highestFinished > -1:
-        #         duration = self.bars[highestFinished][2]
-        #         if duration:
-        #             self.takeBreak(breakBar, duration)
 
     def stopTimers(self, breakBar):
         self.timerRunning = 0
@@ -100,7 +89,7 @@ class MainFrame(tk.Frame):
     def takeBreak(self, breakBar, duration):
         breakStep = 100/duration
         while breakBar["value"] > 0:
-            #FIXME Make this us tk.after()
+            #FIXME Make this use tk.after()
             time.sleep(1)
             breakBar["value"] -= breakStep
             self.update_idletasks()
@@ -133,6 +122,53 @@ class MainFrame(tk.Frame):
     def loadSetup(self):
         with open("setup.json", "r") as setupFile:
             self.setup = dict(json.load(setupFile))
+
+class Timer():
+    def __init__(self, frame, duration=0, breakDuration=0, repeating=True, message = ""):
+        self.frame = frame
+        self.duration = duration
+        self.breakDuration = breakDuration
+        self.repeating = repeating
+        self.message = message
+
+        self.createProgressBar()
+
+    def createProgressBar(self):
+        self.label = tk.Label(self.frame, text = timer)
+        self.label.pack()
+
+        self.progressBar = ttk.Progressbar(
+            self.frame,
+            orient = tk.HORIZONTAL,
+            length = 100,
+            maximum = self.duration,
+            value = 0,
+            mode="determinate"
+        )
+        self.progressBar.pack(pady = 10)
+
+    def hideProgressBar(self):
+        self.progressBar.pack_forget()
+
+    def incrementProgress(self):
+        self.progressBar["value"] += 1
+
+    def getDuration(self):
+        return self.duration
+
+    def getGetBreakDuration(self):
+        return self.breakDuration
+
+    def isRepeating(self):
+        return self.isRepeating
+
+    def getMessage(self):
+        return self.message
+
+    # So that it doesn't get left over if object gets destroyed
+    def __del__(self):
+        self.label.destroy()
+        self.progressBar.destroy()
 
 def main():
     gui = Gui()
