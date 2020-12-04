@@ -33,7 +33,8 @@ class MainFrame(tk.Frame):
         currentPreset = self.setup[self.presets["values"][0]] #FIXME
 
         # createProgress returns reference to interact with the progress bars
-        self.createProgress(currentPreset) #FIXME
+        self.preset = Preset(self, currentPreset) #FIXME
+        self.preset.showPreset()
 
         self.startButton = tk.Button(
             self,
@@ -42,27 +43,6 @@ class MainFrame(tk.Frame):
             command = self.start
         )
         self.startButton.pack(side="bottom")
-
-    # Creates appropriate ammount of progress bars based on preset
-    def createProgress(self, preset):
-        self.bars = []
-        for timer in preset:
-            label = tk.Label(self, text = timer)
-            label.pack()
-
-            barLen = preset[timer]["duration"]
-            prog = ttk.Progressbar(
-                self,
-                orient = tk.HORIZONTAL,
-                length = 100,
-                maximum = barLen,
-                value = 0,
-                mode="determinate"
-            )
-            prog.pack(pady = 10)
-
-            breakLen = preset[timer]["break"]
-            self.bars.append([prog, barLen, breakLen])
 
     def start(self):
         self.timerRunning = 1
@@ -96,35 +76,59 @@ class MainFrame(tk.Frame):
         breakBar["value"] = 100
 
     def updateProgressbars(self, breakBar):
-        for bar in self.bars:
-            bar[0]["value"] += 1
+        self.preset.incrementTimers()
         self.update_idletasks()
-        highestFinished = self.checkForBreak()
+        breakDuration = self.preset.getBreakDuration()
 
-        if highestFinished > -1:
-            duration = self.bars[highestFinished][2]
-            if duration:
-                self.takeBreak(breakBar, duration)
+        if breakDuration > 0:
+            self.takeBreak(breakBar, breakDuration)
         if self.timerRunning:
             self.after(1000, self.updateProgressbars, breakBar)
-
-    def checkForBreak(self):
-        highestFinished = -1
-        #TODO: Add option for longest break instead of last in order
-        for index in range(len(self.bars)):
-            timerValue = self.bars[index][0]["value"]
-            if timerValue >= self.bars[index][1]:
-                if highestFinished < index:
-                    highestFinished = index
-                    self.bars[index][0]["value"] = 0
-        return highestFinished
 
     def loadSetup(self):
         with open("setup.json", "r") as setupFile:
             self.setup = dict(json.load(setupFile))
 
+class Preset():
+    def __init__(self, frame, jsonPreset):
+        self.timers = []
+
+        for timer in jsonPreset:
+            self.createTimer(frame, timer, jsonPreset[timer])
+
+    def createTimer(self, frame, name, timer):
+        duration = timer.get("duration")
+        breakDuration = timer.get("break")
+        msg = timer.get("message")
+        buff = Timer(frame, name, duration, breakDuration, True, msg)
+
+        self.timers.append(buff)
+
+    def incrementTimers(self):
+        for timer in self.timers:
+            timer.incrementProgress()
+
+    def showPreset(self):
+        #TODO: Add to a frame within parent, rather than directly to window
+        for timer in self.timers:
+            timer.showProgressBar()
+
+    def hidePreset(self):
+        for timer in self.timers:
+            timer.hideProgressBar()
+
+    def getBreakDuration(self):
+        breakDuration = 0
+        for timer in self.timers:
+            # print("Timer has " + str(timer.getProgress()) + " progress and " + str(timer.getDuration()) + " duration.")
+            if timer.getProgress() >= timer.getDuration():
+                breakDuration = timer.getBreakDuration()
+                timer.resetProgress()
+        return breakDuration
+
 class Timer():
-    def __init__(self, frame, duration=0, breakDuration=0, repeating=True, message = ""):
+    def __init__(self, frame, name="Untitled", duration=0, breakDuration=0, repeating=True, message = ""):
+        self.name = name
         self.frame = frame
         self.duration = duration
         self.breakDuration = breakDuration
@@ -133,9 +137,9 @@ class Timer():
 
         self.createProgressBar()
 
+    #TODO: Maybe pack progress bar and label into single mini frame?
     def createProgressBar(self):
-        self.label = tk.Label(self.frame, text = timer)
-        self.label.pack()
+        self.label = tk.Label(self.frame, text = self.name)
 
         self.progressBar = ttk.Progressbar(
             self.frame,
@@ -145,18 +149,28 @@ class Timer():
             value = 0,
             mode="determinate"
         )
+
+    def showProgressBar(self):
+        self.label.pack()
         self.progressBar.pack(pady = 10)
 
     def hideProgressBar(self):
+        self.label.pack_forget()
         self.progressBar.pack_forget()
 
     def incrementProgress(self):
         self.progressBar["value"] += 1
 
+    def getProgress(self):
+        return self.progressBar["value"]
+
+    def resetProgress(self):
+        self.progressBar["value"] = 0
+
     def getDuration(self):
         return self.duration
 
-    def getGetBreakDuration(self):
+    def getBreakDuration(self):
         return self.breakDuration
 
     def isRepeating(self):
@@ -165,10 +179,10 @@ class Timer():
     def getMessage(self):
         return self.message
 
-    # So that it doesn't get left over if object gets destroyed
-    def __del__(self):
-        self.label.destroy()
-        self.progressBar.destroy()
+    # So that widgets don't get left over if object gets destroyed
+    # def __del__(self): #TODO: is this necessary?
+    #     self.label.destroy()
+    #     self.progressBar.destroy()
 
 def main():
     gui = Gui()
