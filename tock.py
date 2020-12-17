@@ -40,40 +40,46 @@ class MainFrame(tk.Frame):
             self,
             text="Start",
             width = 10,
-            command = self.start
+            command = self.startTimers
         )
         self.startButton.pack(side="bottom")
 
-    def start(self):
-        self.timerRunning = 1
-        self.startButton["command"] = lambda: self.stopTimers(breakBar)
-        self.startButton["text"] = "Stop"
-
-        breakBar = ttk.Progressbar(
+        self.breakBar = ttk.Progressbar(
             self,
             orient = tk.HORIZONTAL,
             length = 100,
             value = 100,
             mode="determinate"
         )
-        breakBar.pack(pady = 10)
-        self.after(1000, self.updateProgressbars, breakBar)
+        self.breakBar.pack(pady = 10)
 
-    def stopTimers(self, breakBar):
+    def startTimers(self):
+        self.timerRunning = 1
+        self.startButton["command"] = self.stopTimers
+        self.startButton["text"] = "Stop"
+
+        self.breakBar.pack(pady = 10)
+        self.after(1000, self.updateProgressbars, self.breakBar)
+
+    def stopTimers(self):
         self.timerRunning = 0
-        self.startButton["command"] = self.start
+        self.startButton["command"] = self.startTimers
         self.startButton["text"] = "Start"
-        #FIXME Make breakbar pack_forget'ed, rather than destroyed.
-        breakBar.destroy()
+        self.breakBar.pack_forget()
 
     def takeBreak(self, breakBar, duration):
+        #TODO: Make break bar run on same loop as other timers
         breakStep = 100/duration
-        while breakBar["value"] > 0:
-            #FIXME Make this use tk.after()
-            time.sleep(1)
+        self.after(1000, self.incrementBreakBar, breakBar, breakStep)
+        breakBar["value"] = 100
+
+    def incrementBreakBar(self, breakBar, breakStep):
+        if breakBar["value"] > 0:
             breakBar["value"] -= breakStep
             self.update_idletasks()
-        breakBar["value"] = 100
+            self.after(1000, self.incrementBreakBar, breakBar, breakStep)
+        else:
+            self.preset.pauseTimers()
 
     def updateProgressbars(self, breakBar):
         self.preset.incrementTimers()
@@ -81,6 +87,7 @@ class MainFrame(tk.Frame):
         breakDuration = self.preset.getBreakDuration()
 
         if breakDuration > 0:
+            self.preset.pauseTimers()
             self.takeBreak(breakBar, breakDuration)
         if self.timerRunning:
             self.after(1000, self.updateProgressbars, breakBar)
@@ -106,7 +113,8 @@ class Preset():
 
     def incrementTimers(self):
         for timer in self.timers:
-            timer.incrementProgress()
+            if not timer.getPaused():
+                timer.incrementProgress()
 
     def showPreset(self):
         #TODO: Add to a frame within parent, rather than directly to window
@@ -116,6 +124,10 @@ class Preset():
     def hidePreset(self):
         for timer in self.timers:
             timer.hideProgressBar()
+
+    def pauseTimers(self):
+        for timer in self.timers:
+            timer.togglePause()
 
     def getBreakDuration(self):
         breakDuration = 0
@@ -134,6 +146,8 @@ class Timer():
         self.breakDuration = breakDuration
         self.repeating = repeating
         self.message = message
+        self.paused = False
+        self.increment = 1000 #TODO
 
         self.createProgressBar()
 
@@ -158,14 +172,17 @@ class Timer():
         self.label.pack_forget()
         self.progressBar.pack_forget()
 
+    def togglePause(self):
+        self.paused = not self.paused
+
     def incrementProgress(self):
         self.progressBar["value"] += 1
 
-    def getProgress(self):
-        return self.progressBar["value"]
-
     def resetProgress(self):
         self.progressBar["value"] = 0
+
+    def getProgress(self):
+        return self.progressBar["value"]
 
     def getDuration(self):
         return self.duration
@@ -173,11 +190,14 @@ class Timer():
     def getBreakDuration(self):
         return self.breakDuration
 
-    def isRepeating(self):
-        return self.isRepeating
+    def getRepeating(self):
+        return self.repeating
 
     def getMessage(self):
         return self.message
+
+    def getPaused(self):
+        return self.paused
 
     # So that widgets don't get left over if object gets destroyed
     # def __del__(self): #TODO: is this necessary?
