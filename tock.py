@@ -44,53 +44,47 @@ class MainFrame(tk.Frame):
         )
         self.startButton.pack(side="bottom")
 
-        self.breakBar = ttk.Progressbar(
-            self,
-            orient = tk.HORIZONTAL,
-            length = 100,
-            value = 100,
-            mode="determinate"
-        )
-        self.breakBar.pack(pady = 10)
+        if self.preset.hasBreaks():
+            self.breakBar = Timer(self, "Break", duration=100, repeating=False)
 
     def startTimers(self):
         self.timerRunning = 1
         self.startButton["command"] = self.stopTimers
         self.startButton["text"] = "Stop"
 
-        self.breakBar.pack(pady = 10)
-        self.after(1000, self.updateProgressbars, self.breakBar)
+        self.breakBar.showProgressBar() #TODO Make breakbar optional
+        self.after(1000, self.updateProgressbars)
 
     def stopTimers(self):
         self.timerRunning = 0
         self.startButton["command"] = self.startTimers
         self.startButton["text"] = "Start"
-        self.breakBar.pack_forget()
+        self.breakBar.hideProgressBar()
 
-    def takeBreak(self, breakBar, duration):
+    def takeBreak(self, duration):
         #TODO: Make break bar run on same loop as other timers
-        breakStep = 100/duration
-        self.after(1000, self.incrementBreakBar, breakBar, breakStep)
-        breakBar["value"] = 100
+        self.breakBar.setDuration(duration)
+        self.after(1000, self.incrementBreakBar)
+        self.breakBar.resetProgress()
 
-    def incrementBreakBar(self, breakBar, breakStep):
-        if breakBar["value"] > 0:
-            breakBar["value"] -= breakStep
+    def incrementBreakBar(self):
+        if self.breakBar.getProgress() < self.breakBar.getDuration():
+            self.breakBar.incrementProgress()
             self.update_idletasks()
-            self.after(1000, self.incrementBreakBar, breakBar, breakStep)
+            self.after(1000, self.incrementBreakBar)
         else:
             self.preset.pauseTimers()
 
-    def updateProgressbars(self, breakBar):
+    def updateProgressbars(self):
         self.preset.incrementTimers()
         self.update_idletasks()
         breakDuration = self.preset.getBreakDuration()
 
         if breakDuration > 0:
             self.preset.pauseTimers()
-            self.takeBreak(breakBar, breakDuration)
+            self.takeBreak(breakDuration)
         if self.timerRunning:
-            self.after(1000, self.updateProgressbars, breakBar)
+            self.after(1000, self.updateProgressbars)
 
     def loadSetup(self):
         with open("setup.json", "r") as setupFile:
@@ -129,10 +123,16 @@ class Preset():
         for timer in self.timers:
             timer.togglePause()
 
+    def hasBreaks(self):
+        for timer in self.timers:
+            if timer.getBreakDuration() > 0:
+                return True
+        return False
+
+    # Finds timer with longest duration and returns that duration
     def getBreakDuration(self):
         breakDuration = 0
         for timer in self.timers:
-            # print("Timer has " + str(timer.getProgress()) + " progress and " + str(timer.getDuration()) + " duration.")
             if timer.getProgress() >= timer.getDuration():
                 breakDuration = timer.getBreakDuration()
                 timer.resetProgress()
@@ -140,8 +140,8 @@ class Preset():
 
 class Timer():
     def __init__(self, frame, name="Untitled", duration=0, breakDuration=0, repeating=True, message = ""):
-        self.name = name
         self.frame = frame
+        self.name = name
         self.duration = duration
         self.breakDuration = breakDuration
         self.repeating = repeating
@@ -175,8 +175,15 @@ class Timer():
     def togglePause(self):
         self.paused = not self.paused
 
+    def setDuration(self, duration):
+        self.duration = duration
+        self.progressBar["maximum"] = self.duration
+
     def incrementProgress(self):
         self.progressBar["value"] += 1
+
+    def setProgress(self, value):
+        self.progressBar["value"] = value
 
     def resetProgress(self):
         self.progressBar["value"] = 0
