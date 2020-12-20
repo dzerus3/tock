@@ -1,7 +1,7 @@
 {
     "workrave": {
-        "Rest break": {"duration": 5, "break": 5, "message": "Rest break"},
-        "Long break": {"duration": 10, "break": 10, "message": "Long break"},
-        "Finish": {"duration": 20, "break": 0, "message": "Stop working"}
+        "Rest break": {"duration": 3, "break": 5, "message": "Rest break"},
+        "Long break": {"duration": 6, "break": 10, "message": "Long break"},
+        "Finish": {"duration": 12, "break": 0, "message": "Stop working"}
     }
 }
