@@ -9,7 +9,7 @@ class Gui(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
         self.geometry("500x500")
 
-        mainTab = MainFrame(self)
+        mainTab = MainFrame()
         mainTab.pack()
         # tabControl = ttk.Notebook(self)
         # tabControl.add(mainTab)
@@ -17,9 +17,8 @@ class Gui(tk.Tk):
         self.mainloop()
 
 class MainFrame(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-        self.timerRunning = 0
+    def __init__(self):
+        tk.Frame.__init__(self)
         self.loadSetup()
 
         # Dropdown box to select preset
@@ -33,8 +32,10 @@ class MainFrame(tk.Frame):
         currentPreset = self.setup[self.presets["values"][0]] #FIXME
 
         # createProgress returns reference to interact with the progress bars
-        self.preset = Preset(self, currentPreset) #FIXME
-        self.preset.showPreset()
+        preset = Preset(self, currentPreset) #FIXME
+        preset.showPreset()
+
+        self.timerFrame = TimerFrame(self, preset)
 
         self.startButton = tk.Button(
             self,
@@ -44,22 +45,33 @@ class MainFrame(tk.Frame):
         )
         self.startButton.pack(side="bottom")
 
-        if self.preset.hasBreaks():
-            self.breakBar = Timer(self, "Break", duration=100, repeating=False)
-
     def startTimers(self):
-        self.timerRunning = 1
+        self.timerFrame.startTimers()
         self.startButton["command"] = self.stopTimers
         self.startButton["text"] = "Stop"
 
-        self.breakBar.showProgressBar() #TODO Make breakbar optional
-        self.after(1000, self.updateProgressbars)
+        self.after(1000, self.timerFrame.updateProgressbars)
 
     def stopTimers(self):
-        self.timerRunning = 0
+        self.timerFrame.stopTimers()
         self.startButton["command"] = self.startTimers
         self.startButton["text"] = "Start"
-        self.breakBar.hideProgressBar()
+
+    def loadSetup(self):
+        with open("setup.json", "r") as setupFile:
+            self.setup = dict(json.load(setupFile))
+
+class TimerFrame(tk.Frame):
+    def __init__(self, parent, preset):
+        tk.Frame.__init__(self, parent, width=375, height=450)
+        self.pack_propagate(0)
+
+        self.preset = preset
+        self.timerRunning = False
+
+        # if self.preset.hasBreaks():
+        self.breakBar = Timer(self, "Break", duration=100, repeating=False)
+        self.breakBar.showProgressBar()
 
     def takeBreak(self, duration):
         #TODO: Make break bar run on same loop as other timers
@@ -86,9 +98,13 @@ class MainFrame(tk.Frame):
         if self.timerRunning:
             self.after(1000, self.updateProgressbars)
 
-    def loadSetup(self):
-        with open("setup.json", "r") as setupFile:
-            self.setup = dict(json.load(setupFile))
+    def startTimers(self):
+        self.timerRunning = True
+        self.breakBar.showProgressBar() #TODO Make breakbar optional
+
+    def stopTimers(self):
+        self.timerRunning = False
+        self.breakBar.hideProgressBar()
 
 class Preset():
     def __init__(self, frame, jsonPreset):
