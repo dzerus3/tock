@@ -31,11 +31,10 @@ class MainFrame(tk.Frame):
 
         currentPreset = self.setup[self.presets["values"][0]] #FIXME
 
-        # createProgress returns reference to interact with the progress bars
-        preset = Preset(self, currentPreset) #FIXME
-        preset.showPreset()
+        self.timerFrame = TimerFrame(self, currentPreset)
 
-        self.timerFrame = TimerFrame(self, preset)
+        # createProgress returns reference to interact with the progress bars
+        self.timerFrame.pack()
 
         self.startButton = tk.Button(
             self,
@@ -62,16 +61,15 @@ class MainFrame(tk.Frame):
             self.setup = dict(json.load(setupFile))
 
 class TimerFrame(tk.Frame):
-    def __init__(self, parent, preset):
-        tk.Frame.__init__(self, parent, width=375, height=450)
-        self.pack_propagate(0)
+    def __init__(self, parent, jsonPreset):
+        tk.Frame.__init__(self, parent)
 
-        self.preset = preset
+        self.preset = Preset(self, jsonPreset)
+        self.preset.showPreset()
         self.timerRunning = False
 
-        # if self.preset.hasBreaks():
-        self.breakBar = Timer(self, "Break", duration=100, repeating=False)
-        self.breakBar.showProgressBar()
+        if self.preset.hasBreaks():
+            self.breakBar = Timer(self, "Break", duration=100, repeating=False)
 
     def takeBreak(self, duration):
         #TODO: Make break bar run on same loop as other timers
