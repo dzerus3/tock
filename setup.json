@@ -1,7 +1,11 @@
 {
-    "workrave": {
-        "Rest break": {"duration": 3, "break": 5, "message": "Rest break"},
-        "Long break": {"duration": 6, "break": 10, "message": "Long break"},
-        "Finish": {"duration": 12, "break": 0, "message": "Stop working"}
+    "test": {
+        "Short": {"duration": 3, "break": 5, "message": "Rest break"},
+        "Long": {"duration": 6, "break": 10, "message": "Long break"}
+    },
+    "pomodoro": {
+        "Rest break": {"duration": 1500, "break": 300, "message": "Rest break"},
+        "Long break": {"duration": 6000, "break": 900, "message": "Long break"},
+        "Finish": {"duration": 15000, "break": 0, "message": "Stop working"}
     }
 }

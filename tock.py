@@ -25,16 +25,15 @@ class MainFrame(tk.Frame):
         n = tk.StringVar()
         self.presets = ttk.Combobox(self, width = 27, textvariable = n)
 
-        presetNames = list(self.setup.keys())
-        self.presets["values"] = presetNames
-        self.presets.pack()
+        # Sets dropdown options to be preset names
+        self.presets["values"] = list(self.setup.keys())
+        self.presets.bind("<<ComboboxSelected>>", self.changePreset)
+        self.currentPreset = self.presets["values"][0]
+        self.presets.grid(row=0, column=0, sticky="nsew")
 
-        currentPreset = self.setup[self.presets["values"][0]] #FIXME
-
-        self.timerFrame = TimerFrame(self, currentPreset)
-
-        # createProgress returns reference to interact with the progress bars
-        self.timerFrame.pack()
+        self.timerFrames = {}
+        self.createFrames()
+        self.showFrame(self.presets["values"][0])
 
         self.startButton = tk.Button(
             self,
@@ -42,23 +41,39 @@ class MainFrame(tk.Frame):
             width = 10,
             command = self.startTimers
         )
-        self.startButton.pack(side="bottom")
+        self.startButton.grid(row=2, column=0, sticky="nsew")
+
+    def createFrames(self):
+        for frame in self.presets["values"]:
+            currentFrame = self.setup[frame]
+            frameInstance = TimerFrame(self, currentFrame)
+            frameInstance.grid(row=1, column=0, sticky="nsew")
+
+            self.timerFrames[frame] = frameInstance
+
+    def showFrame(self, frameName):
+        frame = self.timerFrames[frameName]
+        frame.tkraise()
 
     def startTimers(self):
-        self.timerFrame.startTimers()
+        self.timerFrames[self.currentPreset].startTimers()
         self.startButton["command"] = self.stopTimers
         self.startButton["text"] = "Stop"
 
-        self.after(1000, self.timerFrame.updateProgressbars)
+        self.after(1000, self.timerFrames[self.currentPreset].updateProgressbars)
 
     def stopTimers(self):
-        self.timerFrame.stopTimers()
+        self.timerFrames[self.currentPreset].stopTimers()
         self.startButton["command"] = self.startTimers
         self.startButton["text"] = "Start"
 
     def loadSetup(self):
         with open("setup.json", "r") as setupFile:
             self.setup = dict(json.load(setupFile))
+
+    def changePreset(self, _):
+        self.currentPreset = self.presets.get()
+        self.showFrame(self.currentPreset)
 
 class TimerFrame(tk.Frame):
     def __init__(self, parent, jsonPreset):
@@ -86,6 +101,7 @@ class TimerFrame(tk.Frame):
             self.preset.pauseTimers()
 
     def updateProgressbars(self):
+        print("Updated")
         self.preset.incrementTimers()
         self.update_idletasks()
         breakDuration = self.preset.getBreakDuration()
